@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SPO Admin - Versión Definitiva</title>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://unpkg.com/jspdf-autotable"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    :root {
+      --primary-bg: #f4f7fc;
+      --sidebar-bg: #1f2937;
+      --sidebar-text: #d1d5db;
+      --sidebar-text-hover: #ffffff;
+      --sidebar-item-hover: #374151;
+      --accent-color: #3b82f6;
+      --accent-color-hover: #2563eb;
+      --card-bg: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #6b7280;
+      --border-color: #e5e7eb;
+      --danger-color: #ef4444;
+      --danger-color-hover: #dc2626;
+      --success-color: #22c55e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Poppins', sans-serif; color: var(--text-primary); display: flex; height: 100vh; overflow: hidden; background-color: var(--primary-bg); }
+    .sidebar { width: 260px; flex-shrink: 0; background-color: var(--sidebar-bg); color: var(--sidebar-text); padding: 20px; display: flex; flex-direction: column; transition: transform 0.3s ease-in-out; z-index: 1001; }
+    .sidebar-header { text-align: center; margin-bottom: 30px; }
+    .sidebar-header h2 { color: var(--sidebar-text-hover); font-size: 1.5rem; }
+    .sidebar-menu { list-style-type: none; }
+    .sidebar-divider { border: none; border-top: 1px solid var(--sidebar-item-hover); margin: 20px 0; }
+    .sidebar-subtitle { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 10px; padding-left: 15px; }
+    .sidebar-menu button { display: flex; align-items: center; gap: 15px; width: 100%; padding: 12px 15px; margin-bottom: 8px; background: none; border: none; color: var(--sidebar-text); text-align: left; font-size: 1rem; font-family: 'Poppins', sans-serif; border-radius: 8px; cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+    .sidebar-menu button:hover:not(:disabled), .sidebar-menu button.active { background-color: var(--sidebar-item-hover); color: var(--sidebar-text-hover); }
+    .sidebar-menu button:disabled { color: #6b7280; cursor: not-allowed; background-color: transparent !important; }
+    .sidebar-menu button svg { width: 20px; height: 20px; flex-shrink: 0; }
+    .main-content { flex-grow: 1; padding: 30px; overflow-y: auto; }
+    .content-section, .sub-section { display: none; }
+    .content-section.active, .sub-section.active { display: block; }
+    .main-header { display: none; }
+    .card { background-color: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 30px; }
+    .card-header { color: var(--text-primary); margin-bottom: 20px; text-align: left; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; }
+    .card-header h1, .card-header h3 { margin: 0; padding: 0; border: none; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 500; color: var(--text-secondary); }
+    input, select, textarea { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; background-color: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2); }
+    .btn { padding: 12px 25px; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: background-color 0.3s; }
+    .btn-primary { background-color: var(--accent-color); color: #ffffff; }
+    .btn-primary:hover { background-color: var(--accent-color-hover); }
+    .btn-secondary { background-color: var(--sidebar-item-hover); color: var(--sidebar-text-hover); }
+    .btn-danger { background-color: var(--danger-color); color: #ffffff; }
+    .btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+    th { background-color: #f9fafb; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 0.85rem; }
+    #lista_resultados button { font-family: 'Poppins', sans-serif; background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; width: 100%; padding: 10px; margin-bottom: 5px; border-radius: 6px; cursor: pointer; text-align: left; }
+    #lista_resultados button:hover { background: #c7d2fe; }
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+    .modal-content { background-color: var(--card-bg); padding: 30px; border: none; border-radius: 12px; width: 90%; max-width: 800px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; max-height: 90vh; overflow-y: auto; }
+    .modal-content-lg { max-width: 1100px; }
+    .modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text-primary); }
+    #mobile-overlay { display: none; }
+    .filter-container { display: flex; flex-wrap: wrap; gap: 15px; align-items: center; margin-bottom: 20px; }
+    .filter-container label { margin-bottom: 0; display: flex; align-items: center; gap: 5px; cursor: pointer; }
+    .summary-container { display: flex; flex-wrap: wrap; gap: 20px; padding: 15px; margin-top: 20px; background-color: #f9fafb; border: 1px solid var(--border-color); border-radius: 8px; }
+    .summary-item { text-align: center; }
+    .summary-item strong { display: block; font-size: 0.9rem; color: var(--text-secondary); }
+    .summary-item span { font-size: 1.2rem; font-weight: 600; }
+    .summary-item span.positive { color: var(--danger-color); }
+    .summary-item span.negative { color: var(--success-color); }
+    td, th { white-space: normal; word-wrap: break-word; }
+    @media (max-width: 768px) {
+      .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); }
+      .sidebar.visible { transform: translateX(0); box-shadow: 0 0 25px rgba(0,0,0,0.2); }
+      .main-content { padding: 15px; }
+      .main-header { display: flex; align-items: center; gap: 15px; padding: 0 0 15px 0; }
+      #hamburger-btn { background: none; border: none; cursor: pointer; padding: 5px; }
+      #hamburger-btn svg { width: 28px; height: 28px; stroke: var(--text-primary); }
+      #mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); z-index: 1000; }
+      #mobile-overlay.visible { display: block; }
+      .card { padding: 15px; }
+      .card-header h1 { font-size: 1.5rem; }
+      .card-header h3 { font-size: 1.2rem; }
+      .form-group[style*="display:flex"] { flex-direction: column; align-items: stretch; gap: 15px; }
+      .form-group[style*="display:flex"] .btn { width: 100%; }
+      .filter-container { flex-direction: column; align-items: flex-start; }
+      .summary-container { justify-content: space-around; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav id="sidebar" class="sidebar">
+    <div class="sidebar-header"><h2>SPO Admin</h2></div>
+    <ul id="menu_general" class="sidebar-menu">
+        <li><button data-action="show-section" data-section="seccion_busqueda_miembro" class="active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg><span>Consultar Miembro</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_gestion_usuarios"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span>Gestión de Usuarios</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_listar_doctores"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg><span>Listar Doctores</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_listar_transacciones"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg><span>Listar Transacciones</span></button></li>
+    </ul>
+    <hr class="sidebar-divider" style="display: none;">
+    <h3 class="sidebar-subtitle" style="display: none;">ACCIONES DEL MIEMBRO</h3>
+    <ul id="menu_miembro" class="sidebar-menu">
+        <li><button data-action="show-section" data-section="seccion_estado_cuenta" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><span>Estado de Cuenta</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_registro_pago" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect></svg><span>Registrar Pago</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_registro_deuda" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg><span>Registrar Deuda</span></button></li>
+        <li><button data-action="show-section" data-section="seccion_registro_credito" disabled><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle></svg><span>Registrar Crédito</span></button></li>
+    </ul>
+  </nav>
+
+  <div id="mobile-overlay"></div>
+
+  <main class="main-content">
+    <div class="main-header">
+      <button id="hamburger-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+      <h1 style="font-size: 1.5rem; margin: 0;">SPO Admin</h1>
+    </div>
+
+    <div id="seccion_busqueda_miembro" class="content-section active">
+        <div class="card">
+            <div class="card-header"><h1>Consultar Miembro</h1></div>
+            <div class="form-group"><label for="consulta_nombre">Buscar por Nombre o Apellido:</label><input type="text" id="consulta_nombre" placeholder="Escribe para buscar..."></div>
+            <button id="btnBuscarMiembro" class="btn btn-primary">Buscar Miembro</button>
+            <div id="lista_resultados"></div>
+        </div>
+    </div>
+    
+    <div id="seccion_gestion_usuarios" class="content-section">
+      <div class="card">
+        <div class="card-header"><h1>Gestión de Usuarios</h1></div>
+        <div class="form-group"><label for="accion_usuario">Acción:</label><select id="accion_usuario"><option value="crear">Crear</option><option value="editar">Editar</option></select></div>
+        <div id="buscarUsuarioContainer" style="display: none; border: 1px solid var(--border-color); padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+          <div class="form-group"><label for="buscar_usuario_input">Buscar para Editar:</label><input type="text" id="buscar_usuario_input" placeholder="Ingresa nombre o apellido"></div>
+          <button id="btnBuscarUsuario" type="button" class="btn btn-secondary">Buscar</button>
+          <div id="resultadoBusqueda" style="margin-top: 15px;"></div>
+        </div>
+        
+        <div class="form-group"><label for="categoria_usuario">CATEGORIA:</label>
+          <select id="categoria_usuario">
+            <option value="">Selecciona</option>
+            <option value="MIEMBRO">Miembro</option>
+            <option value="NO MIEMBRO">No Miembro</option>
+            <option value="ESTUDIANTE">Estudiante</option>
+            <option value="PROVEEDOR">Proveedor</option>
+            <option value="LICENCIA">Licencia</option>
+            <option value="RENUNCIA">Renuncia</option>
+            <option value="ASPIRANTE">Aspirante</option>
+            <option value="VITALICIO">Vitalicio</option>
+          </select>
+        </div>
+        
+        <div class="form-group"><label for="nombre_completo">Nombre Completo:</label><input type="text" id="nombre_completo"></div>
+        <div class="form-group"><label for="email">Email:</label><input type="email" id="email"></div>
+        <div class="form-group"><label for="telefono">Teléfono:</label><input type="tel" id="telefono"></div>
+        <div class="form-group"><label for="empresa">Empresa:</label><input type="text" id="empresa"></div>
+        <div class="form-group"><label for="anio_ingreso">Año de Ingreso:</label><input type="number" id="anio_ingreso" placeholder="Ej: 2023" min="1900" max="2100"></div>
+        
+        <div class="form-group"><label for="status_usuario">STATUS:</label>
+          <select id="status_usuario">
+            <option value="">Selecciona</option>
+            <option value="ACTIVO">Activo</option>
+            <option value="INACTIVO">Inactivo</option>
+          </select>
+        </div>
+
+        <div class="form-group"><label for="fecha_status">Fecha Estatus (opc):</label><input type="date" id="fecha_status"></div>
+        <input type="hidden" id="user_id">
+        <div style="display:flex; justify-content: space-between; align-items: center; gap: 15px;">
+          <button id="btnEliminarUsuario" class="btn btn-danger" style="display: none;">Eliminar</button>
+          <button id="btnGuardarUsuario" class="btn btn-primary" style="flex-grow: 1;">Guardar</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="seccion_listar_doctores" class="content-section">
+        <div class="card">
+            <div class="card-header"><h1>Listado de Doctores</h1></div>
+            <div id="loaderDoctores" style="display: none; text-align: center; margin: 20px 0;">Cargando...</div>
+            
+            <div class="filter-container" style="align-items: flex-end;">
+                <div class="form-group" style="flex: 1 1 200px; margin-bottom: 0;">
+                    <label for="filtro_categoria_doctores">Filtrar por Categoría:</label>
+                    <select id="filtro_categoria_doctores">
+                        <option value="">-- Todas --</option>
+                        <option value="MIEMBRO">Miembro</option>
+                        <option value="NO MIEMBRO">No Miembro</option>
+                        <option value="ESTUDIANTE">Estudiante</option>
+                        <option value="PROVEEDOR">Proveedor</option>
+                        <option value="LICENCIA">Licencia</option>
+                        <option value="RENUNCIA">Renuncia</option>
+                        <option value="ASPIRANTE">Aspirante</option>
+                        <option value="VITALICIO">Vitalicio</option>
+                    </select>
+                </div>
+                <div class="form-group" style="flex: 1 1 200px; margin-bottom: 0;">
+                    <label>Filtrar por Status:</label>
+                    <div id="filtros_status_doctores" class="filter-container" style="margin-bottom: 0;">
+                         <label><input type="checkbox" value="ACTIVO" checked> Activo</label>
+                         <label><input type="checkbox" value="INACTIVO" checked> Inactivo</label>
+                    </div>
+                </div>
+            </div>
+
+            <p><strong>Total de registros: <span id="total_registros_doctores">0</span></strong></p>
+            <div style="overflow-x: auto;">
+                <table id="tablaDoctores">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Empresa</th>
+                            <th>Email</th>
+                            <th>Categoría</th>
+                            <th>Status</th>
+                            <th>Fecha de Estatus</th>
+                            <th>Año de Ingreso</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="seccion_listar_transacciones" class="content-section">
+        <div class="card">
+            <div class="card-header"><h1>Listado de Todas las Transacciones</h1></div>
+            <div class="form-group" style="display:flex; gap:15px; align-items:flex-end;">
+              <div><label for="fecha_inicio_global">Fecha Inicio:</label><input type="date" id="fecha_inicio_global"></div>
+              <div><label for="fecha_fin_global">Fecha Fin:</label><input type="date" id="fecha_fin_global"></div>
+              <button id="btnFiltrarTransacciones" class="btn btn-primary">Filtrar</button>
+              <button id="btnDescargarExcel" class="btn btn-secondary">Excel</button>
+            </div>
+            <div id="loaderTodasTransacciones" style="display: none; text-align: center; margin: 20px 0;">Cargando...</div>
+            <div style="overflow-x: auto;"><table id="tablaTodasTransacciones"><thead><tr><th>Recibo</th><th>Miembro</th><th>Monto</th><th>Concepto</th><th>Forma de Pago</th><th>Fecha</th></tr></thead><tbody></tbody></table></div>
+        </div>
+    </div>
+
+    <div id="vista_miembro" class="content-section">
+      <div class="card">
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 15px;">
+            <div><h1 id="nombre_miembro_grande"></h1><p><strong>Email:</strong> <span id="miembro_email"></span></p><p><strong>Estatus:</strong> <span id="miembro_estatus"></span></p></div>
+            <button id="btnVolverBuscar" class="btn btn-secondary">Volver a Buscar</button>
+        </div>
+      </div>
+      <div id="seccion_estado_cuenta" class="sub-section">
+          <div class="card">
+              <div class="card-header"><h3>Estado de Cuenta</h3></div>
+              <div class="form-group" style="display:flex; gap:15px; align-items:flex-end;">
+                  <div><label for="fecha_inicio_estado">Fecha Inicio:</label><input type="date" id="fecha_inicio_estado"></div>
+                  <div><label for="fecha_fin_estado">Fecha Fin:</label><input type="date" id="fecha_fin_estado"></div>
+                  <button id="btnGenerarEstadoCuenta" class="btn btn-primary">Generar</button>
+              </div>
+              <div id="resumen_financiero" class="summary-container"></div>
+              <div id="estadoCuentaContent" class="table-container" style="overflow-x: auto;"></div>
+          </div>
+      </div>
+      <div id="seccion_registro_pago" class="sub-section">
+          <div class="card">
+              <div class="card-header"><h3>Registrar Pago</h3></div>
+              <div class="form-group"><label for="monto_pago">Monto:</label><input type="number" id="monto_pago" placeholder="0.00" min="0" step="0.01"></div>
+              <div class="form-group"><label for="forma_pago">Forma de Pago:</label><select id="forma_pago"><option value="">Selecciona</option><option value="EFECTIVO">EFECTIVO</option><option value="ACH">ACH</option><option value="CHEQUE">CHEQUE</option><option value="TARJETA DE CRÉDITO">TARJETA DE CRÉDITO</option></select></div>
+              <div class="form-group"><label for="concepto_pago">Concepto:</label><select id="concepto_pago"><option value="">Selecciona</option><option value="ANULAR">ANULAR</option><option value="CUOTA ANUAL">CUOTA ANUAL</option><option value="CUOTA ANUAL VITALICIO">CUOTA ANUAL VITALICIO</option><option value="CUOTA ANUAL PRONTO PAGO">CUOTA ANUAL PRONTO PAGO</option><option value="CUOTA ANUAL PRONTO PAGO VITALICIO">CUOTA ANUAL PRONTO PAGO VITALCIO</option><option value="CONFERENCIA">CONFERENCIA</option><option value="SALDOS ATRASADOS">SALDOS ATRASADOS</option><option value="REUNIÓN">REUNIÓN</option><option value="OTROS">OTROS</option><option value="PATROCINIO">PATROCINIO</option><option value="PUBLICIDAD">PUBLICIDAD</option><option value="STAND-COMERCIAL">STAND-COMERCIAL</option></select></div>
+              <div class="form-group"><label for="descripcion_pago">Descripción:</label><textarea id="descripcion_pago"></textarea></div>
+              <div class="form-group"><label for="fecha_pago">Fecha:</label><input type="date" id="fecha_pago"></div>
+              <button id="btnRegistrarPago" class="btn btn-primary">Registrar Pago</button>
+          </div>
+      </div>
+      <div id="seccion_registro_deuda" class="sub-section">
+          <div class="card">
+              <div class="card-header"><h3>Registrar Deuda</h3></div>
+              <div class="form-group"><label for="tipo_deuda">Tipo:</label><select id="tipo_deuda"><option value="">Selecciona</option><option value="CONFERENCIA">CONFERENCIA</option><option value="CUOTA ANUAL">CUOTA ANUAL</option><option value="CUOTA ANUAL ATRASADA">CUOTA ANUAL ATRASADA</option><option value="OTROS">OTROS</option><option value="PATROCINIO">PATROCINIO</option><option value="PUBLICIDAD">PUBLICIDAD</option><option value="REUNIÓN">REUNIÓN</option><option value="SALDOS ATRASADOS">SALDOS ATRASADOS</option><option value="STAND-COMERCIAL">STAND-COMERCIAL</option></select></div>
+              <div class="form-group"><label for="monto_deuda">Monto:</label><input type="number" id="monto_deuda" placeholder="0.00" min="0" step="0.01"></div>
+              <div class="form-group"><label for="descripcion_deuda">Descripción:</label><textarea id="descripcion_deuda"></textarea></div>
+              <div class="form-group"><label for="fecha_deuda">Fecha:</label><input type="date" id="fecha_deuda"></div>
+              <button id="btnRegistrarDeuda" class="btn btn-primary">Registrar Deuda</button>
+          </div>
+      </div>
+      <div id="seccion_registro_credito" class="sub-section">
+          <div class="card">
+              <div class="card-header"><h3>Registrar Crédito</h3></div>
+              <div class="form-group"><label for="monto_credito">Monto:</label><input type="number" id="monto_credito" placeholder="0.00" min="0" step="0.01"></div>
+              <div class="form-group"><label for="descripcion_credito">Descripción:</label><textarea id="descripcion_credito"></textarea></div>
+              <div class="form-group"><label for="fecha_credito">Fecha:</label><input type="date" id="fecha_credito"></div>
+              <button id="btnRegistrarCredito" class="btn btn-primary">Registrar Crédito</button>
+          </div>
+      </div>
+    </div>
+  </main>
+  
+  <div id="modalPDF" class="modal">
+    <div class="modal-content modal-content-lg">
+      <button class="modal-close" data-action="close-modal-pdf">×</button>
+      <iframe id="visorPDF" src="" width="100%" height="600px" style="border: none;"></iframe>
+      <div style="text-align:center; margin-top: 15px;">
+        <button class="btn btn-primary">Enviar por Correo</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import EstadoCuentaManager from "/static/js/estadoCuenta.js";
+
+    const app = {
+        keyMiembroSeleccionado: null,
+        miembroSeleccionadoData: {},
+        listaMiembrosEncontrados: [],
+        miembrosEncontradosParaEdicion: [],
+        estadoCuentaManager: null,
+        isMobile: () => window.innerWidth <= 768,
+
+        abrirModal: function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'flex';
+        },
+
+        cerrarModal: function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) modal.style.display = 'none';
+        },
+
+        init: function() {
+            this.estadoCuentaManager = new EstadoCuentaManager(this);
+            this.attachEventListeners();
+            this.activarMenuMiembro(false);
+            this.showSection('seccion_busqueda_miembro', document.querySelector('button[data-section="seccion_busqueda_miembro"]'));
+        },
+
+        attachEventListeners: function() {
+            document.body.addEventListener('click', (event) => {
+                const target = event.target;
+                const button = target.closest('button');
+
+                if (button) {
+                    const action = button.dataset.action;
+                    if (action === 'show-section') this.showSection(button.dataset.section, button);
+                    
+                    if (button.dataset.action === 'close-modal-pdf') this.cerrarModal('modalPDF');
+
+                    const buttonHandlers = {
+                        'hamburger-btn': this.toggleSidebar,
+                        'btnBuscarMiembro': this.consultarMiembro,
+                        'btnVolverBuscar': this.volverABusqueda,
+                        'btnRegistrarPago': this.registrarPago,
+                        'btnRegistrarDeuda': this.registrarDeuda,
+                        'btnRegistrarCredito': this.registrarCredito,
+                        'btnGuardarUsuario': this.guardarUsuario,
+                        'btnEliminarUsuario': this.eliminarUsuario,
+                        'btnBuscarUsuario': this.buscarUsuarioParaEditar,
+                        'btnFiltrarTransacciones': this.listarTodasTransacciones,
+                        'btnDescargarExcel': this.descargarExcelTransacciones,
+                        'btnGenerarEstadoCuenta': () => this.estadoCuentaManager.init(this.keyMiembroSeleccionado, this.miembroSeleccionadoData)
+                    };
+                    if (buttonHandlers[button.id]) buttonHandlers[button.id].call(this);
+                }
+                
+                if (target.id === 'mobile-overlay') this.closeSidebar();
+                
+                if (target.matches('#lista_resultados button')) {
+                    const index = Array.from(target.parentElement.children).indexOf(target) - 1;
+                    if (index >= 0) this.seleccionarMiembro(index);
+                }
+                if (target.matches('#resultadoBusqueda button')) {
+                    const index = Array.from(target.parentElement.children).indexOf(target) - 1;
+                    if (index >= 0) this.cargarUsuarioParaEditar(index);
+                }
+            });
+
+            document.getElementById("accion_usuario")?.addEventListener("change", () => this.cambiarModoUsuario());
+            document.getElementById("concepto_pago")?.addEventListener("change", () => this.actualizarMontoPorConcepto());
+            
+            document.getElementById("filtro_categoria_doctores")?.addEventListener("change", () => this.listarDoctores());
+            document.getElementById("filtros_status_doctores")?.addEventListener("change", (event) => {
+                if(event.target.type === 'checkbox') this.listarDoctores();
+            });
+        },
+
+        toggleSidebar: function() {
+            document.getElementById('sidebar').classList.toggle('visible');
+            document.getElementById('mobile-overlay').classList.toggle('visible');
+        },
+
+        closeSidebar: function() {
+            document.getElementById('sidebar').classList.remove('visible');
+            document.getElementById('mobile-overlay').classList.remove('visible');
+        },
+
+        showSection: function(sectionId, button = null) {
+            const esAccionGeneral = ['seccion_busqueda_miembro', 'seccion_listar_doctores', 'seccion_gestion_usuarios', 'seccion_listar_transacciones'].includes(sectionId);
+            
+            if (!esAccionGeneral && !this.keyMiembroSeleccionado) {
+                alert("Primero debe seleccionar un miembro.");
+                return;
+            }
+            
+            document.querySelectorAll('.main-content > .content-section').forEach(s => s.classList.remove('active'));
+            
+            if (esAccionGeneral) {
+                document.getElementById(sectionId).classList.add('active');
+            } else {
+                document.getElementById('vista_miembro').classList.add('active');
+                document.querySelectorAll('#vista_miembro .sub-section').forEach(sub => sub.classList.remove('active'));
+                document.getElementById(sectionId).classList.add('active');
+            }
+            
+            const sectionInitializers = {
+                'seccion_estado_cuenta': () => this.estadoCuentaManager.init(this.keyMiembroSeleccionado, this.miembroSeleccionadoData),
+                'seccion_listar_doctores': this.listarDoctores,
+                'seccion_gestion_usuarios': this.cambiarModoUsuario,
+                'seccion_listar_transacciones': this.listarTodasTransacciones
+            };
+            if(sectionInitializers[sectionId]) sectionInitializers[sectionId].call(this);
+
+            document.querySelectorAll('.sidebar-menu button').forEach(b => b.classList.remove('active'));
+            if (button) button.classList.add('active');
+            else document.querySelector(`button[data-section="${sectionId}"]`)?.classList.add('active');
+
+            if (this.isMobile()) this.closeSidebar();
+        },
+        
+        activarMenuMiembro: function(activar) {
+            document.querySelectorAll('#menu_miembro button').forEach(b => b.disabled = !activar);
+            document.querySelector('.sidebar-divider').style.display = activar ? 'block' : 'none';
+            document.querySelector('.sidebar-subtitle').style.display = activar ? 'block' : 'none';
+        },
+        
+        volverABusqueda: function() {
+            this.keyMiembroSeleccionado = null;
+            this.activarMenuMiembro(false);
+            this.showSection('seccion_busqueda_miembro', document.querySelector('button[data-section="seccion_busqueda_miembro"]'));
+            document.getElementById('lista_resultados').innerHTML = '';
+            document.getElementById('consulta_nombre').value = '';
+        },
+        
+        consultarMiembro: function() {
+            const nombre = document.getElementById('consulta_nombre').value.trim();
+            if (!nombre) return;
+            fetch('/consultar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consulta: `buscar ${nombre}` })
+            })
+            .then(res => res.json())
+            .then(data => {
+                this.listaMiembrosEncontrados = (data.respuesta && data.respuesta.length > 0) ? data.respuesta : [];
+                let opciones = '<h3>Resultados:</h3>';
+                this.listaMiembrosEncontrados.forEach((miembro) => {
+                    opciones += `<button type="button">${miembro['Nombre Completo']}</button>`;
+                });
+                document.getElementById('lista_resultados').innerHTML = this.listaMiembrosEncontrados.length > 0 ? opciones : '<p>No se encontraron resultados.</p>';
+            });
+        },
+        
+        seleccionarMiembro: function(index) {
+            const miembro = this.listaMiembrosEncontrados[index];
+            this.keyMiembroSeleccionado = miembro.Key;
+            this.miembroSeleccionadoData = miembro;
+            document.getElementById('nombre_miembro_grande').textContent = miembro['Nombre Completo'] || 'N/A';
+            document.getElementById('miembro_email').textContent = miembro.Email || 'N/A';
+            document.getElementById('miembro_estatus').textContent = miembro.STATUS || miembro.Estatus || 'N/A';
+            this.activarMenuMiembro(true);
+            this.showSection('seccion_estado_cuenta', document.querySelector('button[data-section="seccion_estado_cuenta"]'));
+        },
+
+        registrarPago: function() {
+            const data = { key_miembro: this.keyMiembroSeleccionado, monto: parseFloat(document.getElementById('monto_pago').value), forma_pago: document.getElementById('forma_pago').value, concepto_pago: document.getElementById('concepto_pago').value, descripcion_pago: document.getElementById('descripcion_pago').value, Fecha: document.getElementById('fecha_pago').value };
+            if (!data.monto || !data.forma_pago || !data.concepto_pago) { alert('Complete campos requeridos.'); return; }
+            fetch('/registrar_pago', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(d => { alert(d.message || d.error); if (!d.error) { this.showSection('seccion_estado_cuenta'); } });
+        },
+        
+        registrarDeuda: function() {
+            const data = { key_miembro: this.keyMiembroSeleccionado, tipo_deuda: document.getElementById('tipo_deuda').value, monto: parseFloat(document.getElementById('monto_deuda').value), descripcion_deuda: document.getElementById('descripcion_deuda').value, fecha: document.getElementById('fecha_deuda').value };
+            if (!data.tipo_deuda || !data.monto) { alert('Complete campos requeridos.'); return; }
+            fetch('/registrar_deuda', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(d => { alert(d.message || d.error); if (!d.error) { this.showSection('seccion_estado_cuenta'); } });
+        },
+        
+        registrarCredito: function() {
+            const data = { key_miembro: this.keyMiembroSeleccionado, monto: parseFloat(document.getElementById('monto_credito').value), descripcion_credito: document.getElementById('descripcion_credito').value, fecha_credito: document.getElementById('fecha_credito').value };
+            if (!data.monto) { alert('Complete el monto.'); return; }
+            fetch('/registrar_credito', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(d => { alert(d.message || d.error); if (!d.error) { this.showSection('seccion_estado_cuenta'); } });
+        },
+
+        listarTodasTransacciones: function() {
+            const loader = document.getElementById('loaderTodasTransacciones'); const tbody = document.querySelector('#tablaTodasTransacciones tbody'); const fechaInicio = document.getElementById('fecha_inicio_global').value; const fechaFin = document.getElementById('fecha_fin_global').value; if (loader) loader.style.display = 'block'; tbody.innerHTML = ''; let url = '/listar_todas_transacciones'; const params = new URLSearchParams(); if (fechaInicio) params.append('fecha_inicio', fechaInicio); if (fechaFin) params.append('fecha_fin', fechaFin); if (params.toString()) url += '?' + params.toString(); fetch(url).then(res => res.json()).then(data => { if (loader) loader.style.display = 'none'; if (data.respuesta) { data.respuesta.sort((a, b) => parseInt(b.NumeroRecibo) - parseInt(a.NumeroRecibo)); data.respuesta.forEach(tx => { const claseFila = tx.Anulado ? 'style="color:red; text-decoration: line-through;"' : ''; tbody.innerHTML += `<tr ${claseFila}><td>${tx.NumeroRecibo}</td><td>${tx.Miembro}</td><td>$${parseFloat(tx.Monto).toFixed(2)}</td><td>${tx.Anulado ? `Anulado: ${tx.Descripcion}` : tx.Concepto}</td><td>${tx.FormaPago}</td><td>${new Date(tx.Fecha + 'T05:00:00').toLocaleDateString('es-PA')}</td></tr>`; }); } else { tbody.innerHTML = `<tr><td colspan="6">${data.message || 'No hay datos.'}</td></tr>`; } }).catch(e => { if (loader) loader.style.display = 'none'; tbody.innerHTML = `<tr><td colspan="6">Error: ${e}</td></tr>`; });
+        },
+
+        descargarExcelTransacciones: function() {
+            const tabla = document.querySelector("#tablaTodasTransacciones"); if (!tabla || tabla.rows.length <= 1) { alert("No hay datos para exportar."); return; } const wb = XLSX.utils.book_new(); const ws = XLSX.utils.table_to_sheet(tabla); XLSX.utils.book_append_sheet(wb, ws, "Transacciones"); XLSX.writeFile(wb, `Transacciones_${new Date().toISOString().split('T')[0]}.xlsx`);
+        },
+
+        listarDoctores: function() {
+            const loader = document.getElementById('loaderDoctores');
+            const tbody = document.querySelector('#tablaDoctores tbody');
+            const contador = document.getElementById('total_registros_doctores');
+            
+            if(loader) loader.style.display = 'block';
+            if(tbody) tbody.innerHTML = '';
+            if(contador) contador.textContent = '0';
+
+            const categoriaSeleccionada = document.getElementById('filtro_categoria_doctores').value;
+            const statusSeleccionados = Array.from(document.querySelectorAll('#filtros_status_doctores input:checked')).map(cb => cb.value);
+
+            let url = '/listar_doctores';
+            const params = new URLSearchParams();
+
+            if (categoriaSeleccionada) {
+                params.append('categoria', categoriaSeleccionada);
+            }
+            statusSeleccionados.forEach(status => params.append('status', status.toLowerCase()));
+
+            if (params.toString()) {
+                url += '?' + params.toString();
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if(loader) loader.style.display = 'none';
+                    if (data.respuesta && data.respuesta.length > 0) {
+                        if(contador) contador.textContent = data.respuesta.length;
+                        data.respuesta.sort((a, b) => (a['NOMBRE COMPLETO'] || '').localeCompare(b['NOMBRE COMPLETO'] || ''));
+                        
+                        let filasHTML = '';
+                        data.respuesta.forEach(doc => {
+                            filasHTML += `<tr>
+                                <td>${doc['NOMBRE COMPLETO'] || 'N/A'}</td>
+                                <td>${doc.EMPRESA || 'N/A'}</td>
+                                <td>${doc.EMAIL || 'N/A'}</td>
+                                <td>${doc.CATEGORIA || 'N/A'}</td>
+                                <td>${doc.STATUS || 'N/A'}</td>
+                                <td>${doc['FECHA ESTATUS'] || 'N/A'}</td>
+                                <td>${doc.INGRESO || 'N/A'}</td>
+                            </tr>`;
+                        });
+                        if(tbody) tbody.innerHTML = filasHTML;
+                    } else {
+                        if(tbody) tbody.innerHTML = `<tr><td colspan="7">${data.message || 'No se encontraron doctores con los filtros seleccionados.'}</td></tr>`;
+                    }
+                })
+                .catch(error => {
+                    if(loader) loader.style.display = 'none';
+                    if(tbody) tbody.innerHTML = `<tr><td colspan="7">Error al cargar: ${error}</td></tr>`;
+                });
+        },
+
+        cambiarModoUsuario: function() {
+            const modo = document.getElementById("accion_usuario").value;
+            document.getElementById("buscarUsuarioContainer").style.display = modo === "editar" ? "block" : "none";
+            document.getElementById("btnGuardarUsuario").textContent = modo === "editar" ? "Actualizar Usuario" : "Crear Usuario";
+            document.getElementById("btnEliminarUsuario").style.display = modo === "editar" ? "inline-block" : "none";
+            if (modo === "crear") this.limpiarFormularioUsuario();
+        },
+        
+        limpiarFormularioUsuario: function() {
+            const form = document.querySelector('#seccion_gestion_usuarios');
+            form.querySelectorAll('input, select, textarea').forEach(el => { 
+                if(el.id !== 'accion_usuario' && el.type !== 'button') el.value = ''; 
+            });
+            document.getElementById("resultadoBusqueda").innerHTML = "";
+        },
+        
+        buscarUsuarioParaEditar: function() {
+            const nombre = document.getElementById("buscar_usuario_input").value.trim(); if (!nombre) return;
+            fetch('/consultar', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ consulta: `buscar ${nombre}` })})
+            .then(res => res.json())
+            .then(data => {
+                const lista = document.getElementById("resultadoBusqueda");
+                lista.innerHTML = "";
+                if (data.respuesta?.length > 0) {
+                    this.miembrosEncontradosParaEdicion = data.respuesta;
+                    let opciones = "<h5>Selecciona para editar:</h5>";
+                    data.respuesta.forEach((m) => {
+                        opciones += `<button type="button">${m["Nombre Completo"]}</button>`;
+                    });
+                    lista.innerHTML = opciones;
+                } else {
+                    lista.innerHTML = `<p>No se encontraron resultados.</p>`;
+                }
+            });
+        },
+        
+        cargarUsuarioParaEditar: function(index) {
+            const m = this.miembrosEncontradosParaEdicion[index];
+            document.getElementById("user_id").value = m.Key || "";
+            document.getElementById("categoria_usuario").value = m.CATEGORIA || "";
+            document.getElementById("nombre_completo").value = m['Nombre Completo'] || "";
+            document.getElementById("email").value = m.Email || "";
+            document.getElementById("telefono").value = m.Teléfono || "";
+            document.getElementById("empresa").value = m.EMPRESA || "";
+            document.getElementById("anio_ingreso").value = m.Ingreso || "";
+            document.getElementById("status_usuario").value = m.STATUS || "";
+            document.getElementById("fecha_status").value = m['FECHA ESTATUS'] ? m['FECHA ESTATUS'].split(' ')[0] : "";
+            document.getElementById("resultadoBusqueda").innerHTML = `<p style="color:var(--success-color);">Cargado: <strong>${m["Nombre Completo"]}</strong></p>`;
+        },
+
+        guardarUsuario: function() {
+            const data = { 
+                user_id: document.getElementById("user_id").value.trim(), 
+                categoria: document.getElementById("categoria_usuario").value.trim(), 
+                status: document.getElementById("status_usuario").value.trim(), 
+                nombre_completo: document.getElementById("nombre_completo").value.trim(), 
+                email: document.getElementById("email").value.trim(), 
+                telefono: document.getElementById("telefono").value.trim(), 
+                empresa: document.getElementById("empresa").value.trim(), 
+                anio_ingreso: document.getElementById("anio_ingreso").value.trim(), 
+                fecha_status: document.getElementById("fecha_status").value.trim() 
+            };
+            if (!data.nombre_completo || !data.categoria) { 
+                alert("Nombre completo y Categoría son campos obligatorios."); 
+                return; 
+            }
+            fetch("/editar_usuario", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) })
+            .then(res => res.json())
+            .then(d => {
+                alert(d.message || d.error);
+                if (!d.error) {
+                    this.limpiarFormularioUsuario();
+                    this.cambiarModoUsuario();
+                }
+            });
+        },
+        
+        eliminarUsuario: function() {
+            const userId = document.getElementById("user_id").value.trim();
+            if (!userId) { alert("No hay usuario cargado para eliminar."); return; }
+            if (!confirm(`¿Seguro de eliminar este usuario? Esta acción es PERMANENTE.`)) return;
+            fetch('/eliminar_usuario', { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user_id: userId }) })
+            .then(res => res.json())
+            .then(d => {
+                alert(d.message || d.error);
+                if (!d.error) {
+                    this.limpiarFormularioUsuario();
+                    this.cambiarModoUsuario();
+                }
+            });
+        },
+        
+        actualizarMontoPorConcepto: function() {
+            const concepto = document.getElementById('concepto_pago').value;
+            const montoInput = document.getElementById('monto_pago');
+            
+            if (!this.miembroSeleccionadoData || Object.keys(this.miembroSeleccionadoData).length === 0) {
+                montoInput.value = '';
+                return;
+            }
+
+            const estatus = this.miembroSeleccionadoData.Estatus || '';
+            const esVitalicio = estatus.toUpperCase().includes('VITALICIO');
+
+            let montoADefinir = '';
+
+            if (concepto === 'CUOTA ANUAL PRONTO PAGO' || concepto === 'CUOTA ANUAL PRONTO PAGO VITALICIO') {
+                montoADefinir = esVitalicio ? (150 * 0.9).toFixed(2) : (300 * 0.9).toFixed(2);
+            } else if (concepto === 'CUOTA ANUAL' || concepto === 'CUOTA ANUAL VITALICIO') {
+                montoADefinir = esVitalicio ? '150.00' : '300.00';
+            }
+            
+            montoInput.value = montoADefinir;
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => app.init());
+  </script>
+</body>
+</html>
