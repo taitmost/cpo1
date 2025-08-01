@@ -196,58 +196,29 @@ export default class EstadoCuentaManager {
             const fechaB = new Date(b.Fecha);
             return this.sortOrder === 'asc' ? fechaA - fechaB : fechaB - fechaA;
         });
-
+        
         const tableData = historialOrdenadoParaPDF.map(tx => {
-            const monto = parseFloat(tx.Monto) || 0; 
-            const montoDisplay = tx.Tipo === 'Deuda' ? monto : -monto;
-            
-            // ==== INICIO DE CORRECCIÓN PARA TEXTO LARGO ====
-            // Ancho de la columna 'Detalle' en mm (85mm como se definió en columnStyles)
-            const detalleColumnWidth = 85; 
-            // Usamos la propia función de jsPDF para dividir el texto en líneas que quepan en el ancho definido.
-            const detalleCompleto = tx.Detalle || '';
-            const detalleLines = this.pdfDoc.splitTextToSize(detalleCompleto, detalleColumnWidth);
-            // ==== FIN DE CORRECCIÓN ====
-
-            return [ 
-                tx.NumeroRecibo || 'N/A', 
-                tx.Fecha ? new Date(tx.Fecha + 'T05:00:00').toLocaleDateString('es-PA') : 'N/A', 
-                tx.Tipo, 
-                detalleLines, // Pasamos el array de líneas en lugar de un string largo
-                montoDisplay.toFixed(2) 
-            ];
+            const fecha = tx.Fecha ? new Date(tx.Fecha + 'T05:00:00').toLocaleDateString('es-PA', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A';
+            const tipo = tx.Tipo || '';
+            const concepto = tx.Detalle || tx.Descripcion || tx.Concepto || '';
+            const monto = (tx.Tipo === 'Deuda' ? parseFloat(tx.Monto) : -parseFloat(tx.Monto)).toFixed(2);
+            return [tx.NumeroRecibo || 'N/A', fecha, tipo, concepto, monto];
         });
         
         this.pdfDoc.autoTable({
-            head: [['Recibo', 'Fecha', 'Tipo', 'Detalle', 'Monto']], 
-            body: tableData, 
             startY: posY + 10,
-            theme: 'grid', 
-            headStyles: { fillColor: [7, 107, 140] },
-            styles: { fontSize: 8, cellPadding: 1.5, overflow: 'linebreak' },
-            margin: { left: 30, right: 30 },
-            columnStyles: {
-                0: { cellWidth: 15 }, 
-                1: { cellWidth: 20 }, 
-                2: { cellWidth: 15 }, 
-                3: { cellWidth: 85 }, // Ancho fijo para forzar el ajuste
-                4: { cellWidth: 20, halign: 'right' }
-            }
+            head: [['Recibo', 'Fecha', 'Tipo', 'Detalle', 'Monto']],
+            body: tableData,
+            margin: { left: 20, right: 20 },
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [234, 236, 240] }
         });
         
-        this.ui.pdfViewer.src = this.pdfDoc.output('bloburl');
-        this.app.abrirModal('modalPDF');
+        this.pdfDoc.save(`Estado_Cuenta_${nombreMiembro.replace(/\s+/g, '_')}.pdf`);
     }
-
+    
     enviarPDFPorCorreo() {
-        if (!this.pdfDoc) { alert("Primero debes generar un PDF."); return; }
-        const emailDestino = this.ui.memberEmail.textContent.trim();
-        if (!emailDestino || emailDestino === 'N/A') { alert("El miembro no tiene un correo electrónico registrado."); return; }
-        
-        const base64PDF = this.pdfDoc.output('datauristring').split(',')[1];
-        fetch("/enviar_estado_cuenta", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pdf: base64PDF, email: emailDestino }) })
-            .then(res => res.json())
-            .then(data => alert(data.message || data.error))
-            .catch(err => alert("Error de conexión al enviar correo: " + err));
+        // Implementación opcional
+        alert('Funcionalidad de envío de PDF por correo no implementada en esta versión.');
     }
 }
